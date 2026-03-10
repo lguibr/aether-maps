@@ -1,6 +1,12 @@
 <div align="center">
 
-# 🌌 Aether Maps
+# Aether Maps
+
+<img
+  src="https://raw.githubusercontent.com/lguibr/aether-maps/main/public/logo.png"
+  alt="screenshot"
+  width="400"
+/>
 
 **High-Performance, Deterministic, Infinite Procedural Voxel World Generation for TypeScript & React**
 
