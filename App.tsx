@@ -60,8 +60,19 @@ const App: React.FC = () => {
   const [path, setPath] = useState<Coordinates[] | null>(null);
   const [pathDistance, setPathDistance] = useState<number | null>(null);
 
+  const [navTargetX, setNavTargetX] = useState<number>(0);
+  const [navTargetY, setNavTargetY] = useState<number>(0);
+
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [mapSize, setMapSize] = useState({ w: 800, h: 600 });
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setActiveConfig(config);
+    }, 500); // 500ms debounce
+    return () => clearTimeout(handler);
+  }, [config]);
+
 
   useEffect(() => {
     const updateSize = () => {
@@ -78,9 +89,17 @@ const App: React.FC = () => {
   }, []);
 
   const handleRegenerate = () => {
-     setActiveConfig({...config});
+     setConfig(prev => ({...prev, seed: Math.random().toString(36).substring(7)}));
      setExploredTiles(new Set());
      setPlayerPos({ x: 0, y: 0, z: 0 }); 
+  };
+
+  const executeMoveToTarget = () => {
+      handleTileDoubleClick(navTargetX, navTargetY);
+  };
+
+  const handleSelectXYPosition = () => {
+      handleTileClick(navTargetX, navTargetY);
   };
 
   // Safe Start Logic
@@ -201,12 +220,12 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex w-full h-screen bg-slate-950 text-slate-200 overflow-hidden">
+    <div className="flex flex-col md:flex-row w-full h-screen bg-slate-950 text-slate-200 overflow-hidden">
       
-      <div className="w-80 flex-shrink-0 flex flex-col p-4 border-r border-slate-800 bg-slate-900 overflow-y-auto z-10 shadow-2xl">
+      <div className="w-full h-[33vh] md:w-1/4 md:min-w-[420px] md:h-screen custom-scrollbar flex-shrink-0 flex flex-col p-5 border-b md:border-b-0 md:border-r border-slate-800 bg-slate-900 overflow-y-auto z-10 shadow-[0_8px_30px_rgba(0,0,0,0.5)] md:shadow-[8px_0_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-3 mb-6">
-          <img src="/logo.png" alt="Aether Maps Logo" className="w-8 h-8 rounded" />
-          <h1 className="text-2xl font-bold text-sky-500 tracking-tight">AETHER MAPS</h1>
+          <img src="/logo.png" alt="Aether Maps Logo" className="w-11 h-11 drop-shadow-[0_0_10px_rgba(14,165,233,0.4)] hover:drop-shadow-[0_0_15px_rgba(14,165,233,0.8)] transition-all" />
+          <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-600 tracking-tighter drop-shadow-sm">AETHER MAPS</h1>
         </div>
         
         <WorldConfigForm 
@@ -234,10 +253,11 @@ const App: React.FC = () => {
                 {[-3, -2, -1, 0, 1, 2, 3].map((z) => (
                     <button
                         key={z}
+                        id={`layer-btn-${z}`}
                         onClick={() => setViewZ(z as ZLevel)}
                         className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
                             viewZ === z 
-                            ? 'bg-sky-600 text-white' 
+                            ? 'bg-sky-600 text-white shadow shadow-sky-500/50' 
                             : 'bg-slate-700 hover:bg-slate-600 text-slate-400'
                         }`}
                     >
@@ -249,10 +269,34 @@ const App: React.FC = () => {
                 <div className="flex justify-between items-center mt-2">
                     <span>Zoom</span>
                     <div className="flex gap-2">
-                        <button onClick={() => handleZoom(-0.25)} className="px-2 bg-slate-700 rounded">-</button>
-                        <span>{Math.round(zoom * 100)}%</span>
-                        <button onClick={() => handleZoom(0.25)} className="px-2 bg-slate-700 rounded">+</button>
+                        <button id="zoom-out-btn" onClick={() => handleZoom(-0.25)} className="px-2 bg-slate-700 hover:bg-slate-600 rounded transition-colors">-</button>
+                        <span id="zoom-value" className="w-12 text-center inline-block">{Math.round(zoom * 100)}%</span>
+                        <button id="zoom-in-btn" onClick={() => handleZoom(0.25)} className="px-2 bg-slate-700 hover:bg-slate-600 rounded transition-colors">+</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div className="bg-slate-800 p-4 rounded-lg shadow-lg mt-4 text-xs font-mono">
+            <h2 className="text-sky-400 font-bold mb-3 border-b border-slate-700 pb-1">4. NAVIGATION</h2>
+            <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                   <div className="flex-[1]">
+                     <label className="text-slate-400 text-[10px] uppercase mb-1 block">Target X</label>
+                     <input type="number" id="nav-target-x" value={navTargetX} onChange={e => setNavTargetX(Number(e.target.value))} className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white focus:outline-none focus:border-sky-500 transition-colors" />
+                   </div>
+                   <div className="flex-[1]">
+                     <label className="text-slate-400 text-[10px] uppercase mb-1 block">Target Y</label>
+                     <input type="number" id="nav-target-y" value={navTargetY} onChange={e => setNavTargetY(Number(e.target.value))} className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white focus:outline-none focus:border-sky-500 transition-colors" />
+                   </div>
+                </div>
+                <div className="flex gap-2">
+                    <button id="action-select-xy" onClick={handleSelectXYPosition} className="flex-1 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-sky-400 font-bold py-2 rounded transition-colors">
+                        Select
+                    </button>
+                    <button id="action-move-xy" onClick={executeMoveToTarget} className="flex-1 bg-sky-600 hover:bg-sky-500 active:bg-sky-400 text-white font-bold py-2 rounded transition-colors shadow shadow-sky-600/30">
+                        Move
+                    </button>
                 </div>
             </div>
         </div>
@@ -269,7 +313,7 @@ const App: React.FC = () => {
         ref={mapContainerRef} 
         onWheel={handleWheel}
       >
-        <div className="absolute inset-0">
+        <div id="map-world-container" className="absolute inset-0">
             <MapRenderer 
                 width={mapSize.w} 
                 height={mapSize.h}
